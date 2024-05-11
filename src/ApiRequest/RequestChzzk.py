@@ -1,29 +1,27 @@
 import aiohttp
-import asyncio
+import json
 
 
-header = {
-	"User-Agent": "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"
-}
+async def getChannelLive(channel_id, is_live):
+	async with aiohttp.ClientSession() as session:
+		async with session.get(f"https://api.chzzk.naver.com/service/v2/channels/{channel_id}/live-detail",
+		                       headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+		                       ) as response:
+			response = await response.json()
 
+			content = response.get('content')
+			status = content.get('status', {})
 
-async def request_chzzk_channel(channel_id):
-	async with aiohttp.ClientSession() as request:
-		url = f"https://api.chzzk.naver.com/service/v2/channels/{channel_id}/live-detail"
-		async with request.get(url, headers=header) as response:
-			if response.status == 200:
-				return await response.json()
-			else:
-				print(f"Error Status code: {response.status}")
+			if status == "OPEN" and is_live == 0:
+				# 방송이 켜졌으면 is_live를 1로 변경
+
+				return {
+					'channelId': content.get('channel', {}).get('channelId'),
+					'liveTitle': content.get('liveTitle'),
+					'channelImageUrl': content.get('channel', {}).get('channelImageUrl'),
+					'openDate': content.get('openDate')
+				}
+
+			elif status == "CLOSE" and is_live == 1:
+				# 방송이 꺼지면 is_live를 0으로 변경
 				return None
-
-
-# api 요청 테스트
-async def main():
-	channel_id = "3a2d2f4e9132d822423f6aa879e598c5"
-	response = await request_chzzk_channel(channel_id)
-	print(response)
-
-
-loop = asyncio.get_event_loop()
-loop.run_until_complete(main())
